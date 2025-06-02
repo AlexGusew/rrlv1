@@ -1,42 +1,182 @@
-# Simple and portable CMake template for raylib
+# Robo Roguelike: Power Nodes v2 (RRL v1)
 
-This is a basic project template for raylib using CMake and has been tested with Visual Studio, Visual Studio Code and CLion.
+A unique asteroids-style roguelike game with a programmable node-based power system. Players build and connect computational nodes to create custom ability sequences, stat modifications, and power enhancements.
 
-The master branch of the raylib source code is downloaded using CMake FetchContent from github and compiled from source as it is much easier than including prebuilt binaries for every platform and configuration.
+## 🎮 Game Overview
 
-Building from the cmake file will build both raylib and `src/main.c` which includes a basic example of a raylib program.
+**Robo Roguelike** combines classic asteroids gameplay with an innovative node programming mechanic. Players survive waves of enemies while constructing and managing a node network that determines their abilities, stats, and action sequences.
 
-## Asset handling
+### Key Features
 
-The example in `src/main.c` uses an example image located in the `assets` folder.
-To load it we use `ASSETS_PATH`, which is a string macro with the *absolute* path "assets" directory.
-This macro is defined in the `CMakeLists.txt` file on line `23`.
- 
-If you plan on releasing or sharing your game consider manually setting the value of the `ASSETS_PATH` macro.
+- **Node-Based Programming System**: Connect different node types to create custom ability chains
+- **Dynamic Stat System**: STAT nodes modify player attributes (health, speed, damage, fire rate)
+- **Action Sequences**: Chain ACTION nodes to create complex ability rotations
+- **Power Modifiers**: POWER nodes enhance connected nodes with value/duration changes
+- **Real-Time Combat**: Classic asteroids movement with modern node-powered abilities
+- **Progressive Difficulty**: Enemies drop new nodes, expanding your system capabilities
 
-In C you can concatenate string literals by putting them next to each other, 
-eg: `"A" "B"` is `"AB"`. So ASSETS_PATH `"test.png"` becomes `"/path/to/your/assets/test.png"`
+## 🏗️ Project Architecture
 
-If you wanna share your game with others you should set ASSETS_PATH to be a *relative* path like "./assets/". You can do this in the CMakeLists.txt file. 
+This project has been **fully refactored** from a monolithic structure to clean **Object-Oriented Programming (OOP)** principles while maintaining 100% feature parity.
 
-## Using C++
+### Core Classes
 
-Using c++ is quite simple, just change these lines in the `CMakeLists.txt`
-from
+#### **Node System**
+- **`BaseNode`** - Abstract base class with virtual `getType()` method
+- **Individual Node Classes** - Each node type implements specific behavior:
+  - `CPUCoreNode` - Central processing unit that powers other nodes
+  - `HealthStatNode`, `SpeedStatNode`, `DamageStatNode`, `FireRateStatNode` - Stat modifiers
+  - `FireActionNode`, `ShieldActionNode`, `ShiftActionNode` - Executable abilities
+  - `DurationReducePowerNode`, `ValueAddPowerNode` - Enhancement modifiers
+
+#### **Game Systems**
+- **`Player`** - Encapsulates player state, node inventory, and stat calculations
+- **`NodesController`** - Manages node system logic, activation, and action sequences
+- **`ControlPanel`** - Handles node management UI (drag/drop, connections, visualization)
+- **`HUD`** - Manages all game UI display (stats, menus, game states)
+
+### Node Connection Rules
+
+The node system follows specific connection patterns:
+
+- **CPU Core → Any Node**: Powers STAT/POWER nodes, starts ACTION sequences
+- **STAT → ACTION**: Provides buffs to connected actions
+- **ACTION → ACTION**: Creates sequential execution chains
+- **POWER → STAT/ACTION**: Modifies connected node values or durations
+
+## 🛠️ Building and Running
+
+### Prerequisites
+- CMake 3.16+
+- C++17 compatible compiler
+- Git (for fetching dependencies)
+
+### Build Instructions
+
+```bash
+# Create build directory
+mkdir -p build && cd build
+
+# Configure and build
+cmake ..
+make
+
+# Run the game
+./asteroids
 ```
-project(my_raylib_game C)
 
-set(CMAKE_C_STANDARD 99)
+### Dependencies
+- **raylib** - Automatically fetched and built via CMake FetchContent
+- **raygui** - UI components, also auto-fetched
 
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/sources/*.c")
+## 🎯 Gameplay Instructions
+
+### Basic Controls
+- **WASD** - Move player
+- **Left Click** - Manual shooting (outside panel area)
+- **TAB** - Toggle control panel
+- **ENTER** - Start game / restart after game over
+
+### Node Management (TAB Panel)
+- **Left Click + Drag** - Move nodes between inventory and grid
+- **Right Click + Drag** - Connect nodes (shows preview line)
+- **Hover** - View node tooltips with detailed information
+- **Mouse Wheel** - Scroll inventory / zoom grid view
+
+### Node Types
+
+#### **Core Nodes**
+- **🟡 CPU Core** - Required for all operations, cannot be removed
+- Powers connected nodes and initiates action sequences
+
+#### **STAT Nodes** (Passive Modifiers)
+- **🟢 Health Chip** - Increases max health, buffs shield duration
+- **🔵 Speed Chip** - Increases movement speed, buffs phase shift
+- **🔴 Damage Chip** - Increases bullet damage, buffs fire abilities
+- **🟦 FireRate Chip** - Decreases fire cooldown
+
+#### **ACTION Nodes** (Active Abilities)
+- **🟠 Fire Blast** - Launches enhanced projectiles
+- **🟣 Energy Shield** - Temporary damage immunity
+- **🩷 Phase Shift** - Massive speed boost
+
+#### **POWER Nodes** (Modifiers)
+- **🟢 Duration Mod** - Modifies connected action durations
+- **🟦 Value Mod** - Enhances connected node values
+
+## 🎨 Visual System
+
+### Connection Visualization
+- **🟡 Yellow Lines** - CPU to STAT/POWER connections
+- **🔵 Sky Blue Lines** - CPU to ACTION connections  
+- **🟦 Cyan Lines** - ACTION sequence chains
+- **🟣 Purple Lines** - STAT to ACTION buffs
+- **🟢 Green Lines** - POWER modifications
+
+### Node States
+- **Yellow Border** - Active nodes (powered by CPU)
+- **White Border** - Currently executing action
+- **Pulsing Effect** - Active action nodes
+- **Semi-transparent** - Nodes being dragged
+
+## 📁 Project Structure
+
 ```
-to
+rrlv1/
+├── CMakeLists.txt          # Build configuration
+├── README.md               # This file
+├── CLAUDE.md              # Development guidance
+├── assets/                # Game assets
+│   └── test.png
+├── build/                 # Build output directory
+└── sources/               # Source code
+    ├── main.cpp           # Main game loop and integration
+    ├── BaseNode.h/.cpp    # Abstract node base class
+    ├── NodeTypes.h/.cpp   # Concrete node implementations
+    ├── Player.h/.cpp      # Player state and logic
+    ├── NodesController.h/.cpp  # Node system management
+    ├── ControlPanel.h/.cpp     # Node UI management
+    └── HUD.h/.cpp         # Game UI display
 ```
-project(my_raylib_game CXX)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+## 🔄 Development History
 
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/sources/*.cpp")
-```
-After this just reload cmake and it should build fine.
+This project evolved from a monolithic `main.cpp` implementation to a fully object-oriented architecture through comprehensive refactoring:
+
+### Refactoring Achievements
+✅ **Extracted Node System** - From structs to polymorphic classes  
+✅ **Separated UI Logic** - ControlPanel and HUD classes  
+✅ **Isolated Game Logic** - NodesController for system management  
+✅ **Encapsulated Player State** - Clean Player class interface  
+✅ **Maintained Feature Parity** - 100% original functionality preserved  
+✅ **Implemented All Features** - Removed all stub implementations  
+
+### Technical Improvements
+- **Polymorphism** - Virtual methods for node type handling
+- **Encapsulation** - Proper data hiding and interface design
+- **Separation of Concerns** - Each class has single responsibility
+- **Memory Management** - Smart pointers for safe node handling
+- **Type Safety** - Strong typing for node connections
+
+## 🚀 Current Status
+
+**COMPLETE**: The project is fully functional with all features implemented:
+- ✅ Node creation and inventory management
+- ✅ Drag and drop interface
+- ✅ Node connection system with visual feedback
+- ✅ Action sequence execution
+- ✅ Stat modification system
+- ✅ Enemy AI and combat
+- ✅ Progressive difficulty
+- ✅ Complete UI system with tooltips
+- ✅ Clean OOP architecture
+
+The game maintains the original's unique blend of action gameplay and programming concepts while providing a solid foundation for future enhancements.
+
+## 🎮 Version Information
+
+- **Current Version**: v0.0.3
+- **Engine**: raylib 5.6-dev
+- **Language**: C++17
+- **Architecture**: Object-Oriented Programming
+- **Platform**: Cross-platform (tested on macOS)
