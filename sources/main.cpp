@@ -1,8 +1,9 @@
 // main.cpp
 #include "raylib.h"
 #include "raymath.h"
-#include <algorithm> // For std::min, std::max, std::find, std::remove
-#include <cmath>     // For sinf, fmaxf, etc.
+#include <algorithm>
+#include <cmath>
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -26,8 +27,8 @@ const Color STAT_ACTION_LINK_COLOR = {128, 0, 128, 255};
 const Color POWER_LINK_COLOR = {50, 205, 50, 255}; // LimeGreen like
 const Color DARKSLATEBLUE = {72, 61, 139, 255};
 const Color MIDNIGHTBLUE = {25, 25, 112, 255};
-const Color TEAL_CUSTOM = {0, 128, 128, 255};     // Raylib TEAL is very dark
-const Color VIOLET_CUSTOM = {238, 130, 238, 255}; // Raylib VIOLET
+const Color TEAL_CUSTOM = {0, 128, 128, 255};
+const Color VIOLET_CUSTOM = {238, 130, 238, 255};
 
 //------------------------------------------------------------------------------------
 // Enums and Structs
@@ -172,10 +173,12 @@ struct Player {
     position = {(float)SCREEN_WIDTH / 2.0f, (float)SCREEN_HEIGHT / 2.0f};
     baseSpeed = 200.0f;
     baseHealth = 100;
-    baseFireRate = 0.5f;
+    baseFireRate = 2.5f;
     baseDamage = 10;
     activeActionNodeId = -1;
     playerShieldIsActive = false;
+    fireCooldownTimer = 0.0f;
+
     resetStats();
   }
 
@@ -225,17 +228,14 @@ struct Player {
       Node *currentAction = GetPlayerNodeById(activeActionNodeId);
       if (currentAction && currentAction->type == NodeType::ACTION_SHIFT &&
           currentAction->isCurrentlyActiveEffect) {
-        float shiftEffectiveValue =
-            currentAction->value; // Base value of ACTION_SHIFT
+        float shiftEffectiveValue = currentAction->value;
         for (int fromId : currentAction->connectedFromNodeIDs) {
           Node *modNode = GetPlayerNodeById(fromId);
           if (modNode && modNode->isActive) {
             if (modNode->type == NodeType::POWER_VALUE_ADD) {
               shiftEffectiveValue += modNode->value;
             } else if (modNode->type == NodeType::STAT_SPEED) {
-              shiftEffectiveValue +=
-                  modNode
-                      ->value; // STAT_SPEED directly buffs ACTION_SHIFT's value
+              shiftEffectiveValue += modNode->value;
             }
           }
         }
@@ -294,7 +294,7 @@ Node *Player::GetPlayerNodeById(int id) { return GetNodeById(id, placedNodes); }
 // Program main entry point
 //------------------------------------------------------------------------------------
 int main() {
-  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Robo-Roguelike - Power Nodes v2");
+  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Robo-Roguelike - Power Nodes v3");
   SetTargetFPS(60);
   InitGame();
   while (!WindowShouldClose()) {
@@ -335,11 +335,9 @@ void InitNodeTemplates() {
   nodeTemplates[NodeType::ACTION_SHIFT] =
       Node(0, NodeType::ACTION_SHIFT, "Phase Shift", 75.0f, 1.5f);
   nodeTemplates[NodeType::POWER_DURATION_REDUCE] =
-      Node(0, NodeType::POWER_DURATION_REDUCE, "Duration Mod",
-           -0.5f); // Value is duration change
+      Node(0, NodeType::POWER_DURATION_REDUCE, "Duration Mod", -0.5f);
   nodeTemplates[NodeType::POWER_VALUE_ADD] =
-      Node(0, NodeType::POWER_VALUE_ADD, "Value Mod",
-           10.0f); // Value is amount to add
+      Node(0, NodeType::POWER_VALUE_ADD, "Value Mod", 10.0f);
 }
 Node CreateNodeFromTemplate(NodeType type) {
   if (nodeTemplates.count(type)) {
@@ -432,10 +430,7 @@ void FireActionBullet(Player &p, Bullet bulletsArray[],
         direction = {0, -1};
       bulletsArray[i].velocity = Vector2Scale(direction, BULLET_SPEED * 1.1f);
       bulletsArray[i].color = ORANGE;
-      bulletsArray[i].damage =
-          p.currentDamage +
-          (int)effectiveDamage; // Add player's currentDamage (from other
-                                // STAT_DAMAGE nodes)
+      bulletsArray[i].damage = p.currentDamage + (int)effectiveDamage;
       break;
     }
   }
@@ -456,28 +451,33 @@ void UpdateGame(float gameDt) {
   player.position.y = Clamp(player.position.y, (float)PLAYER_SIZE,
                             (float)SCREEN_HEIGHT - PLAYER_SIZE);
 
-  // Player manual shooting only if panel is closed
-  // if (!isPanelOpen) {
+  // Player manual shooting
   player.fireCooldownTimer -= gameDt;
+  std::cout << IsMouseButtonDown(MOUSE_LEFT_BUTTON) << ", "
+            << player.fireCooldownTimer << ", " << player.currentFireRate
+            << std::endl;
   if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && player.fireCooldownTimer <= 0) {
     Vector2 mousePos = GetMousePosition();
-    for (int i = 0; i < MAX_BULLETS; i++) {
-      if (!bullets[i].active) {
-        bullets[i].active = true;
-        bullets[i].fromPlayer = true;
-        bullets[i].position = player.position;
-        Vector2 direction =
-            Vector2Normalize(Vector2Subtract(mousePos, player.position));
-        if (Vector2LengthSqr(direction) == 0)
-          direction = {0, -1};
-        bullets[i].velocity = Vector2Scale(direction, BULLET_SPEED);
-        bullets[i].color = YELLOW;
-        bullets[i].damage = player.currentDamage;
-        player.fireCooldownTimer = player.currentFireRate;
-        break;
+    std::cout << mousePos.x << ", " << panelArea.x << ", " << isPanelOpen
+              << std::endl;
+    if (mousePos.x < panelArea.x || !isPanelOpen) {
+      for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].active) {
+          bullets[i].active = true;
+          bullets[i].fromPlayer = true;
+          bullets[i].position = player.position;
+          Vector2 direction =
+              Vector2Normalize(Vector2Subtract(mousePos, player.position));
+          if (Vector2LengthSqr(direction) == 0)
+            direction = {0, -1}; // Default shoot upwards if mouse on player
+          bullets[i].velocity = Vector2Scale(direction, BULLET_SPEED);
+          bullets[i].color = YELLOW;
+          bullets[i].damage = player.currentDamage;
+          player.fireCooldownTimer = player.currentFireRate;
+          break;
+        }
       }
     }
-    // }
   }
 
   // Action Node System Update
@@ -571,7 +571,7 @@ void UpdateGame(float gameDt) {
           bullets[i].position, Vector2Scale(bullets[i].velocity, gameDt));
       if (bullets[i].position.x < 0 || bullets[i].position.x > SCREEN_WIDTH ||
           bullets[i].position.y < 0 || bullets[i].position.y > SCREEN_HEIGHT) {
-        bullets[i].active = false; // Allow bullets to fly across full screen
+        bullets[i].active = false;
       }
     }
   }
@@ -662,10 +662,9 @@ void DrawGame() {
           TextFormat("ACTION: %s (%.1fs)", activeNode->name.c_str(),
                      fmaxf(0.0f, activeNode->currentActiveTimer));
       int textWidth = MeasureText(text, 20);
-      float gameAreaReferenceWidth = SCREEN_WIDTH; // Text can span full width
+      float gameAreaReferenceWidth = SCREEN_WIDTH;
       if (isPanelOpen)
-        gameAreaReferenceWidth =
-            SCREEN_WIDTH * 2.0f / 3.0f; // If panel open, confine to game area
+        gameAreaReferenceWidth = SCREEN_WIDTH * 2.0f / 3.0f;
       DrawText(text, (int)(gameAreaReferenceWidth / 2.0f - textWidth / 2.0f),
                10, 20, activeNode->color);
     }
@@ -690,8 +689,7 @@ void UpdateNodeActivation() {
       }
     }
   }
-  player
-      .applyNodeEffects(); // This will recalculate stats based on active nodes
+  player.applyNodeEffects();
 }
 
 void InitControlPanel() {
@@ -826,8 +824,7 @@ void UpdateControlPanel(float dt) {
     }
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
       connectingNodeFromId = -1;
-      if (toNodeForConnection) { // Allow starting connection from any node type
-                                 // for flexibility
+      if (toNodeForConnection) {
         connectingNodeFromId = toNodeForConnection->id;
       }
     }
@@ -836,20 +833,16 @@ void UpdateControlPanel(float dt) {
         Node *fromNode = player.GetPlayerNodeById(connectingNodeFromId);
         if (fromNode && fromNode->id != toNodeForConnection->id) {
           bool connectionChanged = false;
-          // CPU connections (POWER, STAT, ACTION_START)
           if (fromNode->type == NodeType::CPU_CORE) {
             if (toNodeForConnection->isStatType() ||
                 toNodeForConnection->isPowerType() ||
                 toNodeForConnection->isActionType()) {
-              if (toNodeForConnection
-                      ->isActionType()) { // CPU to ACTION is one-to-one for
-                                          // sequence start
+              if (toNodeForConnection->isActionType()) {
                 for (size_t i = 0; i < fromNode->connectedToNodeIDs.size();) {
                   Node *prev =
                       player.GetPlayerNodeById(fromNode->connectedToNodeIDs[i]);
                   if (prev && prev->isActionType() &&
-                      prev->id !=
-                          toNodeForConnection->id) { // Remove old ACTION link
+                      prev->id != toNodeForConnection->id) {
                     prev->connectedFromNodeIDs.erase(
                         std::remove(prev->connectedFromNodeIDs.begin(),
                                     prev->connectedFromNodeIDs.end(),
@@ -861,7 +854,7 @@ void UpdateControlPanel(float dt) {
                   } else
                     i++;
                 }
-              } // For STAT/POWER, CPU can connect to many
+              }
               if (std::find(fromNode->connectedToNodeIDs.begin(),
                             fromNode->connectedToNodeIDs.end(),
                             toNodeForConnection->id) ==
@@ -872,12 +865,9 @@ void UpdateControlPanel(float dt) {
                 connectionChanged = true;
               }
             }
-          } // ACTION sequence connections
-          else if (fromNode->isActionType() &&
-                   toNodeForConnection->isActionType()) {
-            for (size_t i = 0; i < fromNode->connectedToNodeIDs
-                                       .size();) { // Action node only has one
-                                                   // outgoing ACTION connection
+          } else if (fromNode->isActionType() &&
+                     toNodeForConnection->isActionType()) {
+            for (size_t i = 0; i < fromNode->connectedToNodeIDs.size();) {
               Node *prev =
                   player.GetPlayerNodeById(fromNode->connectedToNodeIDs[i]);
               if (prev && prev->isActionType() &&
@@ -900,24 +890,19 @@ void UpdateControlPanel(float dt) {
               toNodeForConnection->connectedFromNodeIDs.push_back(fromNode->id);
               connectionChanged = true;
             }
-          } // STAT buffing ACTION
-          else if (fromNode->isStatType() &&
-                   toNodeForConnection->isActionType()) {
+          } else if (fromNode->isStatType() &&
+                     toNodeForConnection->isActionType()) {
             if (std::find(fromNode->connectedToNodeIDs.begin(),
                           fromNode->connectedToNodeIDs.end(),
                           toNodeForConnection->id) ==
-                fromNode->connectedToNodeIDs
-                    .end()) { // Stat can buff multiple actions / one action by
-                              // multiple stats
+                fromNode->connectedToNodeIDs.end()) {
               fromNode->connectedToNodeIDs.push_back(toNodeForConnection->id);
               toNodeForConnection->connectedFromNodeIDs.push_back(fromNode->id);
               connectionChanged = true;
             }
-          } // POWER modifying ACTION or STAT
-          else if (fromNode->isPowerType() &&
-                   (toNodeForConnection->isActionType() ||
-                    toNodeForConnection->isStatType())) {
-            // Power node connects to one target. Clear previous if any.
+          } else if (fromNode->isPowerType() &&
+                     (toNodeForConnection->isActionType() ||
+                      toNodeForConnection->isStatType())) {
             for (size_t i = 0; i < fromNode->connectedToNodeIDs.size();) {
               Node *prevTarget =
                   player.GetPlayerNodeById(fromNode->connectedToNodeIDs[i]);
@@ -929,8 +914,7 @@ void UpdateControlPanel(float dt) {
                     prevTarget->connectedFromNodeIDs.end());
               fromNode->connectedToNodeIDs.erase(
                   fromNode->connectedToNodeIDs.begin() + i);
-              connectionChanged =
-                  true; // Indicate change even if removing old to add new
+              connectionChanged = true;
             }
             fromNode->connectedToNodeIDs.push_back(toNodeForConnection->id);
             toNodeForConnection->connectedFromNodeIDs.push_back(fromNode->id);
@@ -988,10 +972,11 @@ void DrawControlPanel() {
     float contentHeight = player.inventoryNodes.size() * NODE_INV_ITEM_HEIGHT;
     float viewableRatio = panelInventoryArea.height / contentHeight;
     float scrollbarHeight = panelInventoryArea.height * viewableRatio;
-    float scrollRatio = (contentHeight > panelInventoryArea.height)
+    float scrollRatio = (contentHeight > panelInventoryArea.height &&
+                         panelInventoryArea.height > 0)
                             ? (inventoryScrollOffset /
                                (contentHeight - panelInventoryArea.height))
-                            : 0;
+                            : 0; // Avoid div by zero
     float scrollbarY =
         panelInventoryArea.y +
         scrollRatio * (panelInventoryArea.height - scrollbarHeight);
@@ -1037,7 +1022,7 @@ void DrawControlPanel() {
           Vector2 dir = Vector2Normalize(Vector2Subtract(
               toNodePtr->panelPosition, fromNodeRef.panelPosition));
           if (Vector2LengthSqr(dir) == 0)
-            dir = {0, -1}; // Avoid issues if positions overlap
+            dir = {0, -1};
           float arrowHeadOffset =
               (NODE_UI_SIZE / 2.0f) + 2.0f / panelCamera.zoom;
           Vector2 arrowEnd = Vector2Subtract(
@@ -1076,11 +1061,10 @@ void DrawControlPanel() {
       borderColor = YELLOW;
     else if (node.id == player.activeActionNodeId &&
              node.isCurrentlyActiveEffect)
-      borderColor = WHITE; // Active Action
+      borderColor = WHITE;
     else if (node.isActionType() && !node.isCurrentlyActiveEffect &&
              player.activeActionNodeId == node.id)
-      borderColor = LIGHTGRAY; // Cooldown Action
-
+      borderColor = LIGHTGRAY;
     DrawCircleLines((int)node.panelPosition.x, (int)node.panelPosition.y,
                     NODE_UI_SIZE / 2.0f, borderColor);
     float textSize = fmaxf(4.0f, 10.0f / panelCamera.zoom);
@@ -1126,9 +1110,8 @@ void DrawControlPanel() {
         maxWidth = fmaxf(maxWidth, (float)MeasureText(line2Text.c_str(), 10));
         if (!line3Text.empty())
           maxWidth = fmaxf(maxWidth, (float)MeasureText(line3Text.c_str(), 10));
-        maxWidth += 10; // Padding
-        float tooltipHeight =
-            12 + (line3Text.empty() ? 0 : 12) + 12 + 4; // Lines + padding
+        maxWidth = fmaxf(120.0f, maxWidth + 10); // Min width + Padding
+        float tooltipHeight = 12 + (line3Text.empty() ? 0 : 12) + 12 + 4;
 
         DrawRectangle((int)tooltipPos.x, (int)tooltipPos.y, (int)maxWidth,
                       (int)tooltipHeight, ColorAlpha(BLACK, 0.8f));
@@ -1176,9 +1159,9 @@ void UpdateDrawFrame() {
     if (isPanelOpen)
       DrawControlPanel();
   } else if (currentGameState == GameState::MAIN_MENU) {
-    DrawText("ROBO ROGUELIKE: POWER NODES",
+    DrawText("ROBO ROGUELIKE: POWER NODES v2",
              (int)(SCREEN_WIDTH / 2.0f -
-                   MeasureText("ROBO ROGUELIKE: POWER NODES", 30) / 2.0f),
+                   MeasureText("ROBO ROGUELIKE: POWER NODES v2", 30) / 2.0f),
              (int)(SCREEN_HEIGHT / 2.0f - 40), 30, WHITE);
     DrawText("Press ENTER to Start",
              (int)(SCREEN_WIDTH / 2.0f -
