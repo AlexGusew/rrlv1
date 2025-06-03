@@ -36,8 +36,8 @@ public:
   float currentActiveTimer;
   bool isCurrentlyActiveEffect;
 
-  BaseNode(int _id = -1, NodeType _type = NodeType::NONE, std::string _name = "N/A",
-           float _val = 0.0f, float _dur = 0.0f);
+  BaseNode(int _id = -1, NodeType _type = NodeType::NONE,
+           std::string _name = "N/A", float _val = 0.0f, float _dur = 0.0f);
 
   virtual ~BaseNode() = default;
 
