@@ -37,16 +37,17 @@ void Player::resetStats() {
 void Player::applyNodeEffects() {
   resetStats();
   for (auto &node : placedNodes) {
-    if (node->isActive && node->isStatType()) {
+    if (node->isActive && node->getNodeKind() == NodeKind::STAT) {
       float effectiveStatValue = node->value;
       for (int fromId : node->connectedFromNodeIDs) {
         BaseNode *powerNode = GetPlayerNodeById(fromId);
-        if (powerNode && powerNode->getType() == NodeType::POWER_VALUE_ADD &&
+        if (powerNode &&
+            powerNode->getNodeType() == NodeType::POWER_VALUE_ADD &&
             powerNode->isActive) {
           effectiveStatValue += powerNode->value;
         }
       }
-      switch (node->getType()) {
+      switch (node->getNodeType()) {
       case NodeType::STAT_HEALTH:
         maxHealth += (int)effectiveStatValue;
         break;
@@ -70,15 +71,16 @@ void Player::applyNodeEffects() {
   // Handle shift action effects
   if (activeActionNodeId != -1) {
     BaseNode *currentAction = GetPlayerNodeById(activeActionNodeId);
-    if (currentAction && currentAction->getType() == NodeType::ACTION_SHIFT &&
+    if (currentAction &&
+        currentAction->getNodeType() == NodeType::ACTION_SHIFT &&
         currentAction->isCurrentlyActiveEffect) {
       float shiftEffectiveValue = currentAction->value;
       for (int fromId : currentAction->connectedFromNodeIDs) {
         BaseNode *modNode = GetPlayerNodeById(fromId);
         if (modNode && modNode->isActive) {
-          if (modNode->getType() == NodeType::POWER_VALUE_ADD) {
+          if (modNode->getNodeType() == NodeType::POWER_VALUE_ADD) {
             shiftEffectiveValue += modNode->value;
-          } else if (modNode->getType() == NodeType::STAT_SPEED) {
+          } else if (modNode->getNodeType() == NodeType::STAT_SPEED) {
             shiftEffectiveValue += modNode->value;
           }
         }

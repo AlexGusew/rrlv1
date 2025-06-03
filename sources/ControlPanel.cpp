@@ -1,4 +1,5 @@
 #include "ControlPanel.h"
+#include "BaseNode.h"
 #include "Player.h"
 #include "raymath.h"
 #include <algorithm>
@@ -167,18 +168,19 @@ void ControlPanel::UpdateNodeConnections(Player &player) {
         bool connectionChanged = false;
 
         // CPU Core connection rules
-        if (fromNode->getType() == NodeType::CPU_CORE) {
-          if (toNodeForConnection->isStatType() ||
-              toNodeForConnection->isPowerType() ||
-              toNodeForConnection->isActionType()) {
+        if (fromNode->getNodeType() == NodeType::CPU_CORE) {
+          if (toNodeForConnection->getNodeKind() == NodeKind::STAT ||
+              toNodeForConnection->getNodeKind() == NodeKind::POWER ||
+              toNodeForConnection->getNodeKind() == NodeKind::ACTION) {
 
             // Special rule: CPU can only connect to one ACTION at a time
-            if (toNodeForConnection->isActionType()) {
+            if (toNodeForConnection->getNodeKind() == NodeKind::ACTION) {
               // Remove existing ACTION connections
               for (size_t i = 0; i < fromNode->connectedToNodeIDs.size();) {
                 BaseNode *existingTarget =
                     player.GetPlayerNodeById(fromNode->connectedToNodeIDs[i]);
-                if (existingTarget && existingTarget->isActionType() &&
+                if (existingTarget &&
+                    existingTarget->getNodeKind() == NodeKind::ACTION &&
                     existingTarget->id != toNodeForConnection->id) {
                   // Remove bidirectional connection
                   existingTarget->connectedFromNodeIDs.erase(
@@ -207,13 +209,14 @@ void ControlPanel::UpdateNodeConnections(Player &player) {
           }
         }
         // ACTION to ACTION sequence connections
-        else if (fromNode->isActionType() &&
-                 toNodeForConnection->isActionType()) {
+        else if (fromNode->getNodeKind() == NodeKind::ACTION &&
+                 toNodeForConnection->getNodeKind() == NodeKind::ACTION) {
           // Remove existing ACTION connections from this node
           for (size_t i = 0; i < fromNode->connectedToNodeIDs.size();) {
             BaseNode *existingTarget =
                 player.GetPlayerNodeById(fromNode->connectedToNodeIDs[i]);
-            if (existingTarget && existingTarget->isActionType() &&
+            if (existingTarget &&
+                existingTarget->getNodeKind() == NodeKind::ACTION &&
                 existingTarget->id != toNodeForConnection->id) {
               existingTarget->connectedFromNodeIDs.erase(
                   std::remove(existingTarget->connectedFromNodeIDs.begin(),
@@ -239,8 +242,8 @@ void ControlPanel::UpdateNodeConnections(Player &player) {
           }
         }
         // STAT to ACTION buff connections
-        else if (fromNode->isStatType() &&
-                 toNodeForConnection->isActionType()) {
+        else if (fromNode->getNodeKind() == NodeKind::STAT &&
+                 toNodeForConnection->getNodeKind() == NodeKind::ACTION) {
           if (std::find(fromNode->connectedToNodeIDs.begin(),
                         fromNode->connectedToNodeIDs.end(),
                         toNodeForConnection->id) ==
@@ -251,9 +254,9 @@ void ControlPanel::UpdateNodeConnections(Player &player) {
           }
         }
         // POWER to STAT/ACTION modifier connections
-        else if (fromNode->isPowerType() &&
-                 (toNodeForConnection->isActionType() ||
-                  toNodeForConnection->isStatType())) {
+        else if (fromNode->getNodeKind() == NodeKind::POWER &&
+                 (toNodeForConnection->getNodeKind() == NodeKind::ACTION ||
+                  toNodeForConnection->getNodeKind() == NodeKind::STAT)) {
           // Remove existing POWER connections (POWER nodes can only connect to
           // one target)
           for (size_t i = 0; i < fromNode->connectedToNodeIDs.size(); i++) {
@@ -316,7 +319,7 @@ void ControlPanel::HandleNodeRemoval(Player &player) {
       draggingNodeIndex < (int)player.placedNodes.size()) {
 
     // Don't allow removing the CPU core node
-    if (player.placedNodes[draggingNodeIndex]->getType() ==
+    if (player.placedNodes[draggingNodeIndex]->getNodeType() ==
         NodeType::CPU_CORE) {
       return;
     }
@@ -454,21 +457,25 @@ void ControlPanel::DrawConnections(const Player &player) {
         bool isDirected = false;
 
         // Determine line color and style based on connection type
-        if (fromNode->getType() == NodeType::CPU_CORE &&
-            (toNode->isStatType() || toNode->isPowerType())) {
+        if (fromNode->getNodeType() == NodeType::CPU_CORE &&
+            (toNode->getNodeKind() == NodeKind::STAT ||
+             toNode->getNodeKind() == NodeKind::POWER)) {
           lineColor = YELLOW; // CPU to STAT/POWER
-        } else if (fromNode->getType() == NodeType::CPU_CORE &&
-                   toNode->isActionType()) {
+        } else if (fromNode->getNodeType() == NodeType::CPU_CORE &&
+                   toNode->getNodeKind() == NodeKind::ACTION) {
           lineColor = SKYBLUE; // CPU to ACTION
           isDirected = true;
-        } else if (fromNode->isActionType() && toNode->isActionType()) {
+        } else if (fromNode->getNodeKind() == NodeKind::ACTION &&
+                   toNode->getNodeKind() == NodeKind::ACTION) {
           lineColor = CYAN; // ACTION to ACTION sequence
           isDirected = true;
-        } else if (fromNode->isStatType() && toNode->isActionType()) {
+        } else if (fromNode->getNodeKind() == NodeKind::STAT &&
+                   toNode->getNodeKind() == NodeKind::ACTION) {
           lineColor = STAT_ACTION_LINK_COLOR; // STAT buffs ACTION
           isDirected = true;
-        } else if (fromNode->isPowerType() &&
-                   (toNode->isActionType() || toNode->isStatType())) {
+        } else if (fromNode->getNodeKind() == NodeKind::POWER &&
+                   (toNode->getNodeKind() == NodeKind::ACTION ||
+                    toNode->getNodeKind() == NodeKind::STAT)) {
           lineColor = POWER_LINK_COLOR; // POWER modifies STAT/ACTION
           isDirected = true;
         }
@@ -530,14 +537,15 @@ void ControlPanel::DrawNodes(const Player &player) {
     DrawCircleV(node->panelPosition, NODE_UI_SIZE / 2.0f, nodeDrawColor);
 
     Color borderColor = DARKGRAY;
-    // TODO: instead of isStatType make getNodeType for each node
-    if (node->isActive && (node->isStatType() || node->isPowerType() ||
-                           node->getType() == NodeType::CPU_CORE))
+    if (node->isActive && (node->getNodeKind() == NodeKind::STAT ||
+                           node->getNodeKind() == NodeKind::POWER ||
+                           node->getNodeType() == NodeType::CPU_CORE))
       borderColor = YELLOW;
     else if (node->id == player.activeActionNodeId &&
              node->isCurrentlyActiveEffect)
       borderColor = WHITE;
-    else if (node->isActionType() && !node->isCurrentlyActiveEffect &&
+    else if (node->getNodeKind() == NodeKind::ACTION &&
+             !node->isCurrentlyActiveEffect &&
              player.activeActionNodeId == node->id)
       borderColor = LIGHTGRAY;
 
@@ -588,10 +596,11 @@ void ControlPanel::DrawTooltips(const Player &player) {
             TextFormat("ID:%d Val:%.1f", node->id, node->value);
         std::string line3Text;
 
-        if (node->isActionType()) {
+        if (node->getNodeKind() == NodeKind::ACTION) {
           line3Text = TextFormat("Dur:%.1fs Eff:%s", node->duration,
                                  node->isCurrentlyActiveEffect ? "ON" : "OFF");
-        } else if (node->isStatType() || node->isPowerType()) {
+        } else if (node->getNodeKind() == NodeKind::STAT ||
+                   node->getNodeKind() == NodeKind::POWER) {
           line3Text = TextFormat("Active:%s", node->isActive ? "YES" : "NO");
         }
 

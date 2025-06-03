@@ -17,10 +17,13 @@ enum class NodeType {
   POWER_VALUE_ADD
 };
 
+enum class NodeKind { CPU, ACTION, STAT, POWER };
+
 class BaseNode {
 public:
   int id;
   NodeType type;
+  NodeKind kind;
   std::string name;
   std::string description;
   float value;
@@ -37,15 +40,11 @@ public:
   bool isCurrentlyActiveEffect;
 
   BaseNode(int _id = -1, NodeType _type = NodeType::NONE,
-           std::string _name = "N/A", float _val = 0.0f, float _dur = 0.0f);
+           NodeKind _kind = NodeKind::ACTION, std::string _name = "N/A",
+           float _val = 0.0f, float _dur = 0.0f);
 
   virtual ~BaseNode() = default;
 
-  virtual NodeType getType() const = 0;
-  bool isActionType() const;
-  bool isStatType() const;
-  bool isPowerType() const;
-
-protected:
-  virtual void setTypeSpecificProperties() = 0;
+  virtual NodeType getNodeType() const { return type; }
+  virtual NodeKind getNodeKind() const { return kind; }
 };

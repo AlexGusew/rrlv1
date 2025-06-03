@@ -1,4 +1,5 @@
 #include "NodesController.h"
+#include "BaseNode.h"
 #include "NodeTypes.h"
 #include "raymath.h"
 #include <cmath>
@@ -84,19 +85,20 @@ NodesController::GetNodeById(int id,
 void NodesController::UpdateNodeActivation(Player &player) {
   // Reset all non-CPU nodes to inactive
   for (auto &node : player.placedNodes) {
-    if (node->getType() == NodeType::CPU_CORE)
+    if (node->getNodeType() == NodeType::CPU_CORE)
       node->isActive = true;
-    else if (node->isStatType() || node->isPowerType())
+    else if (node->getNodeKind() == NodeKind::STAT ||
+             node->getNodeKind() == NodeKind::POWER)
       node->isActive = false;
   }
 
   // Activate nodes connected to CPU
   BaseNode *cpuNode = player.GetPlayerNodeById(0);
-  if (cpuNode && cpuNode->getType() == NodeType::CPU_CORE) {
+  if (cpuNode && cpuNode->getNodeType() == NodeType::CPU_CORE) {
     for (int connectedId : cpuNode->connectedToNodeIDs) {
       BaseNode *targetNode = player.GetPlayerNodeById(connectedId);
-      if (targetNode &&
-          (targetNode->isStatType() || targetNode->isPowerType())) {
+      if (targetNode && (targetNode->getNodeKind() == NodeKind::STAT ||
+                         targetNode->getNodeKind() == NodeKind::POWER)) {
         targetNode->isActive = true;
       }
     }
@@ -110,10 +112,11 @@ void NodesController::UpdateActionSystem(Player &player, Bullet bullets[],
   if (player.activeActionNodeId == -1) {
     // Start new action sequence
     BaseNode *cpuNode = player.GetPlayerNodeById(0);
-    if (cpuNode && cpuNode->getType() == NodeType::CPU_CORE) {
+    if (cpuNode && cpuNode->getNodeType() == NodeType::CPU_CORE) {
       for (int connectedId : cpuNode->connectedToNodeIDs) {
         BaseNode *potentialStartNode = player.GetPlayerNodeById(connectedId);
-        if (potentialStartNode && potentialStartNode->isActionType()) {
+        if (potentialStartNode &&
+            potentialStartNode->getNodeKind() == NodeKind::ACTION) {
           player.activeActionNodeId = potentialStartNode->id;
           StartNewAction(player, bullets, potentialStartNode);
           break;
@@ -132,18 +135,19 @@ void NodesController::ProcessActionSequence(Player &player, Bullet bullets[],
   if (currentActionNode) {
     if (currentActionNode->currentActiveTimer > 0) {
       currentActionNode->currentActiveTimer -= dt;
-      if (currentActionNode->getType() == NodeType::ACTION_SHIELD)
+      if (currentActionNode->getNodeType() == NodeType::ACTION_SHIELD)
         player.playerShieldIsActive = true;
     } else {
       // Action finished, find next action or restart
       currentActionNode->isCurrentlyActiveEffect = false;
-      if (currentActionNode->getType() == NodeType::ACTION_SHIELD)
+      if (currentActionNode->getNodeType() == NodeType::ACTION_SHIELD)
         player.playerShieldIsActive = false;
 
       int nextNodeInSequenceId = -1;
       for (int connectedId : currentActionNode->connectedToNodeIDs) {
         BaseNode *potentialNextNode = player.GetPlayerNodeById(connectedId);
-        if (potentialNextNode && potentialNextNode->isActionType()) {
+        if (potentialNextNode &&
+            potentialNextNode->getNodeKind() == NodeKind::ACTION) {
           nextNodeInSequenceId = potentialNextNode->id;
           break;
         }
@@ -174,9 +178,9 @@ void NodesController::StartNewAction(Player &player, Bullet bullets[],
   actionNode->currentActiveTimer = fmaxf(0.1f, effectiveDuration);
   actionNode->isCurrentlyActiveEffect = true;
 
-  if (actionNode->getType() == NodeType::ACTION_FIRE)
+  if (actionNode->getNodeType() == NodeType::ACTION_FIRE)
     FireActionBullet(player, bullets, *actionNode);
-  else if (actionNode->getType() == NodeType::ACTION_SHIELD)
+  else if (actionNode->getNodeType() == NodeType::ACTION_SHIELD)
     player.playerShieldIsActive = true;
 }
 
@@ -186,10 +190,10 @@ float NodesController::CalculateEffectiveDuration(const BaseNode *actionNode,
   for (int fromId : actionNode->connectedFromNodeIDs) {
     BaseNode *modNode = player.GetPlayerNodeById(fromId);
     if (modNode && modNode->isActive) {
-      if (modNode->getType() == NodeType::POWER_DURATION_REDUCE)
+      if (modNode->getNodeType() == NodeType::POWER_DURATION_REDUCE)
         effectiveDuration += modNode->value;
-      else if (actionNode->getType() == NodeType::ACTION_SHIELD &&
-               modNode->getType() == NodeType::STAT_HEALTH)
+      else if (actionNode->getNodeType() == NodeType::ACTION_SHIELD &&
+               modNode->getNodeType() == NodeType::STAT_HEALTH)
         effectiveDuration += modNode->value / 50.0f;
     }
   }
@@ -201,7 +205,7 @@ float NodesController::CalculateEffectiveValue(const BaseNode *node,
   float effectiveValue = node->value;
   for (int fromId : node->connectedFromNodeIDs) {
     BaseNode *powerNode = player.GetPlayerNodeById(fromId);
-    if (powerNode && powerNode->getType() == NodeType::POWER_VALUE_ADD &&
+    if (powerNode && powerNode->getNodeType() == NodeType::POWER_VALUE_ADD &&
         powerNode->isActive) {
       effectiveValue += powerNode->value;
     }
@@ -217,7 +221,7 @@ void NodesController::FireActionBullet(Player &player, Bullet bullets[],
   for (int fromId : fireActionNode.connectedFromNodeIDs) {
     BaseNode *modifierNode = player.GetPlayerNodeById(fromId);
     if (modifierNode && modifierNode->isActive) {
-      if (modifierNode->getType() == NodeType::STAT_DAMAGE) {
+      if (modifierNode->getNodeType() == NodeType::STAT_DAMAGE) {
         effectiveDamage += modifierNode->value;
       }
     }
