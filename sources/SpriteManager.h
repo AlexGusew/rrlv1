@@ -19,6 +19,7 @@ private:
   static constexpr int SPRITE_COUNT = static_cast<int>(SpriteType::COUNT);
   Texture2D spritesheet;
   Rectangle sprites[SPRITE_COUNT];
+  Rectangle collisions[SPRITE_COUNT];
 
 public:
   // Constructor
@@ -33,7 +34,7 @@ public:
   SpriteManager(SpriteManager &&other) = delete;
   SpriteManager &operator=(SpriteManager &&other) = delete;
 
-  void Init(const char *spritesheetPath);
+  void Init(const char *spritesheetPath, const Rectangle *collisions);
 
   // Main drawing function
   void DrawSprite(SpriteType type, Vector2 position, float scale = 1.0f) const;

@@ -1,4 +1,5 @@
 #pragma once
+#include "Player.h"
 #include "raylib.h"
 
 class Player;
@@ -6,7 +7,7 @@ class BaseNode;
 
 class ControlPanel {
 public:
-  ControlPanel();
+  ControlPanel(Player &player);
   ~ControlPanel() = default;
 
   void Initialize(int screenWidth, int screenHeight);
@@ -29,23 +30,24 @@ private:
   bool draggingFromInventory;
   int connectingNodeFromId;
   Vector2 startCameraDraggingPos;
+  Player &player;
 
   static const float NODE_UI_SIZE;
   static const float NODE_INV_ITEM_HEIGHT;
 
-  void UpdateInventoryScroll(const Player &player);
+  void UpdateInventoryScroll();
   void UpdateGridCamera();
-  void UpdateNodeDragging(Player &player);
-  void UpdateNodeConnections(Player &player);
-  void HandleNodePlacement(Player &player);
-  void HandleNodeRemoval(Player &player);
-  void HandleCameraMove(Player &player);
+  void UpdateNodeDragging();
+  void UpdateNodeConnections();
+  void HandleNodePlacement();
+  void HandleNodeRemoval();
+  void HandleCameraMove();
 
-  void DrawInventoryArea(const Player &player);
-  void DrawGridArea(const Player &player);
-  void DrawConnections(const Player &player);
-  void DrawNodes(const Player &player);
-  void DrawDraggedNode(const Player &player);
-  void DrawTooltips(const Player &player);
-  void DrawScrollbar(const Player &player);
+  void DrawInventoryArea();
+  void DrawGridArea();
+  void DrawConnections();
+  void DrawNodes();
+  void DrawDraggedNode();
+  void DrawTooltips();
+  void DrawScrollbar();
 };

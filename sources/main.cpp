@@ -1,6 +1,8 @@
 // main.cpp - Refactored with OOP principles
+#include "CollisionEditor.h"
 #include "ControlPanel.h"
 #include "HUD.h"
+#include "InputDisplay.h"
 #include "NodesController.h"
 #include "Player.h"
 #include "SpriteManager.h"
@@ -69,6 +71,7 @@ public:
     height = GetRenderHeight();
   };
 };
+
 //------------------------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------------------------
@@ -78,10 +81,12 @@ Bullet bullets[MAX_BULLETS];
 Enemy enemies[MAX_ENEMIES];
 
 NodesController nodesController;
-ControlPanel controlPanel;
+ControlPanel controlPanel(player);
 Window window;
 HUD hud;
 SpriteManager spriteManager;
+CollisionEditor collisionEditor;
+InputDisplay inputDisplay;
 
 //------------------------------------------------------------------------------------
 // Function Declarations
@@ -99,13 +104,19 @@ bool AreColorsEqual(Color c1, Color c2);
 
 bool firstRender = false;
 
+const Rectangle collisions[] = {
+    {4, 3, 24, 26},   {35, 3, 24, 26},   {74, 5, 12, 21},
+    {106, 3, 24, 26}, {138, 3, 24, 26},  {172, 10, 7, 14},
+    {204, 3, 24, 26}, {224, 10, 32, 12}, {257, 3, 11, 26}};
+
 int main() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
 
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "rrl - v0.0.3");
   SetTargetFPS(60);
 
-  spriteManager.Init("../assets/spritesheet.png");
+  spriteManager.Init("../assets/spritesheet.png", collisions);
+  collisionEditor.AddSprite("General", "../assets/spritesheet.png");
 
   InitGame();
   while (!WindowShouldClose()) {
@@ -361,6 +372,9 @@ void UpdateDrawFrame() {
     }
   }
 
+  collisionEditor.Step();
+  inputDisplay.Update();
+
   BeginDrawing();
   ClearBackground(BLACK);
 
@@ -376,6 +390,8 @@ void UpdateDrawFrame() {
   }
 
   spriteManager.DrawDebugSprites();
+  collisionEditor.Draw();
+  inputDisplay.Draw();
 
   EndDrawing();
 }

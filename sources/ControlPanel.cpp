@@ -15,10 +15,10 @@ const Color STAT_ACTION_LINK_COLOR = {128, 0, 128, 255};
 const Color POWER_LINK_COLOR = {50, 205, 50, 255};
 const Color CYAN = {0, 255, 255, 255};
 
-ControlPanel::ControlPanel()
+ControlPanel::ControlPanel(Player &player)
     : isPanelOpen(false), inventoryScrollOffset(0.0f), draggingNodeIndex(-1),
       draggingFromInventory(false), connectingNodeFromId(-1),
-      startCameraDraggingPos({-1, -1}) {}
+      startCameraDraggingPos({-1, -1}), player(player) {}
 
 void ControlPanel::Initialize(int screenWidth, int screenHeight) {
   panelArea = {screenWidth * 2.0f / 3.0f, 0, screenWidth / 3.0f,
@@ -42,14 +42,14 @@ void ControlPanel::Update(Player &player, float dt) {
   if (!isPanelOpen)
     return;
 
-  UpdateInventoryScroll(player);
+  UpdateInventoryScroll();
   UpdateGridCamera();
-  HandleCameraMove(player);
-  UpdateNodeDragging(player);
-  UpdateNodeConnections(player);
+  HandleCameraMove();
+  UpdateNodeDragging();
+  UpdateNodeConnections();
 }
 
-void ControlPanel::UpdateInventoryScroll(const Player &player) {
+void ControlPanel::UpdateInventoryScroll() {
   Vector2 mousePosScreen = GetMousePosition();
   if (CheckCollisionPointRec(mousePosScreen, panelInventoryArea)) {
     inventoryScrollOffset -= GetMouseWheelMove() * NODE_INV_ITEM_HEIGHT * 0.5f;
@@ -75,7 +75,7 @@ void ControlPanel::UpdateGridCamera() {
   }
 }
 
-void ControlPanel::HandleCameraMove(Player &player) {
+void ControlPanel::HandleCameraMove() {
   Vector2 mousePosScreen = GetMousePosition();
   Vector2 mousePosPanelGridWorld =
       GetScreenToWorld2D(mousePosScreen, panelCamera);
@@ -111,7 +111,7 @@ void ControlPanel::HandleCameraMove(Player &player) {
     startCameraDraggingPos = {-1, -1}; // Reset to "null" state
   }
 }
-void ControlPanel::UpdateNodeDragging(Player &player) {
+void ControlPanel::UpdateNodeDragging() {
   Vector2 mousePosScreen = GetMousePosition();
   Vector2 mousePosPanelGridWorld =
       GetScreenToWorld2D(mousePosScreen, panelCamera);
@@ -162,9 +162,9 @@ void ControlPanel::UpdateNodeDragging(Player &player) {
 
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && draggingNodeIndex != -1) {
       if (draggingFromInventory) {
-        HandleNodePlacement(player);
+        HandleNodePlacement();
       } else {
-        HandleNodeRemoval(player);
+        HandleNodeRemoval();
       }
       draggingNodeIndex = -1;
     }
@@ -174,7 +174,7 @@ void ControlPanel::UpdateNodeDragging(Player &player) {
   }
 }
 
-void ControlPanel::UpdateNodeConnections(Player &player) {
+void ControlPanel::UpdateNodeConnections() {
   Vector2 mousePosScreen = GetMousePosition();
   Vector2 mousePosPanelGridWorld =
       GetScreenToWorld2D(mousePosScreen, panelCamera);
@@ -328,7 +328,7 @@ void ControlPanel::UpdateNodeConnections(Player &player) {
   }
 }
 
-void ControlPanel::HandleNodePlacement(Player &player) {
+void ControlPanel::HandleNodePlacement() {
   Vector2 mousePosScreen = GetMousePosition();
   if (CheckCollisionPointRec(mousePosScreen, panelGridArea) &&
       draggingNodeIndex >= 0 &&
@@ -351,7 +351,7 @@ void ControlPanel::HandleNodePlacement(Player &player) {
   }
 }
 
-void ControlPanel::HandleNodeRemoval(Player &player) {
+void ControlPanel::HandleNodeRemoval() {
   Vector2 mousePosScreen = GetMousePosition();
   if (CheckCollisionPointRec(mousePosScreen, panelInventoryArea) &&
       draggingNodeIndex >= 0 &&
@@ -420,11 +420,11 @@ void ControlPanel::Draw(const Player &player) {
   DrawText("CONTROL PANEL (TAB)", (int)(panelArea.x + 10),
            (int)(panelArea.y + 10), 20, WHITE);
 
-  DrawInventoryArea(player);
-  DrawGridArea(player);
+  DrawInventoryArea();
+  DrawGridArea();
 }
 
-void ControlPanel::DrawInventoryArea(const Player &player) {
+void ControlPanel::DrawInventoryArea() {
   DrawText("Inventory:", (int)panelInventoryArea.x,
            (int)(panelInventoryArea.y - 25), 15, WHITE);
   DrawRectangleRec(panelInventoryArea, ColorAlpha(DARKSLATEBLUE, 0.5f));
@@ -461,10 +461,10 @@ void ControlPanel::DrawInventoryArea(const Player &player) {
 
   EndScissorMode();
 
-  DrawScrollbar(player);
+  DrawScrollbar();
 }
 
-void ControlPanel::DrawGridArea(const Player &player) {
+void ControlPanel::DrawGridArea() {
   DrawText("System Grid:", (int)panelGridArea.x, (int)(panelGridArea.y - 25),
            15, WHITE);
   DrawRectangleRec(panelGridArea, ColorAlpha(MIDNIGHTBLUE, 0.5f));
@@ -473,17 +473,17 @@ void ControlPanel::DrawGridArea(const Player &player) {
                    (int)panelGridArea.width, (int)panelGridArea.height);
   BeginMode2D(panelCamera);
 
-  DrawConnections(player);
-  DrawNodes(player);
+  DrawConnections();
+  DrawNodes();
 
   EndMode2D();
   EndScissorMode();
 
-  DrawDraggedNode(player);
-  DrawTooltips(player);
+  DrawDraggedNode();
+  DrawTooltips();
 }
 
-void ControlPanel::DrawConnections(const Player &player) {
+void ControlPanel::DrawConnections() {
   // Draw connections between nodes
   for (const auto &fromNode : player.placedNodes) {
     if (!fromNode)
@@ -558,7 +558,7 @@ void ControlPanel::DrawConnections(const Player &player) {
   }
 }
 
-void ControlPanel::DrawNodes(const Player &player) {
+void ControlPanel::DrawNodes() {
   for (const auto &node : player.placedNodes) {
     if (!node)
       continue; // Safety check for null pointers
@@ -601,7 +601,7 @@ void ControlPanel::DrawNodes(const Player &player) {
   }
 }
 
-void ControlPanel::DrawDraggedNode(const Player &player) {
+void ControlPanel::DrawDraggedNode() {
   if (draggingNodeIndex != -1 && draggingFromInventory &&
       draggingNodeIndex < (int)player.inventoryNodes.size()) {
     const auto &node = player.inventoryNodes[draggingNodeIndex];
@@ -616,7 +616,7 @@ void ControlPanel::DrawDraggedNode(const Player &player) {
   }
 }
 
-void ControlPanel::DrawTooltips(const Player &player) {
+void ControlPanel::DrawTooltips() {
   Vector2 mousePosScreen = GetMousePosition();
   if (CheckCollisionPointRec(mousePosScreen, panelGridArea)) {
     Vector2 worldMouse = GetScreenToWorld2D(mousePosScreen, panelCamera);
@@ -669,7 +669,7 @@ void ControlPanel::DrawTooltips(const Player &player) {
   }
 }
 
-void ControlPanel::DrawScrollbar(const Player &player) {
+void ControlPanel::DrawScrollbar() {
   if (player.inventoryNodes.size() * NODE_INV_ITEM_HEIGHT >
       panelInventoryArea.height) {
     float contentHeight = player.inventoryNodes.size() * NODE_INV_ITEM_HEIGHT;
