@@ -3,6 +3,7 @@
 #include "HUD.h"
 #include "NodesController.h"
 #include "Player.h"
+#include "SpriteManager.h"
 #include "raylib.h"
 #include "raymath.h"
 #include <cmath>
@@ -80,6 +81,7 @@ NodesController nodesController;
 ControlPanel controlPanel;
 Window window;
 HUD hud;
+SpriteManager spriteManager;
 
 //------------------------------------------------------------------------------------
 // Function Declarations
@@ -102,6 +104,8 @@ int main() {
 
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "rrl - v0.0.3");
   SetTargetFPS(60);
+
+  spriteManager.Init("../assets/spritesheet.png");
 
   InitGame();
   while (!WindowShouldClose()) {
@@ -370,6 +374,8 @@ void UpdateDrawFrame() {
     DrawGame();
     hud.DrawGameOver(window.width, window.height);
   }
+
+  spriteManager.DrawDebugSprites();
 
   EndDrawing();
 }

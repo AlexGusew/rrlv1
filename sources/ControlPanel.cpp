@@ -1,6 +1,7 @@
 #include "ControlPanel.h"
 #include "BaseNode.h"
 #include "Player.h"
+#include "raylib.h"
 #include "raymath.h"
 #include <algorithm>
 #include <cmath>
@@ -16,7 +17,8 @@ const Color CYAN = {0, 255, 255, 255};
 
 ControlPanel::ControlPanel()
     : isPanelOpen(false), inventoryScrollOffset(0.0f), draggingNodeIndex(-1),
-      draggingFromInventory(false), connectingNodeFromId(-1) {}
+      draggingFromInventory(false), connectingNodeFromId(-1),
+      startCameraDraggingPos({-1, -1}) {}
 
 void ControlPanel::Initialize(int screenWidth, int screenHeight) {
   panelArea = {screenWidth * 2.0f / 3.0f, 0, screenWidth / 3.0f,
@@ -42,6 +44,7 @@ void ControlPanel::Update(Player &player, float dt) {
 
   UpdateInventoryScroll(player);
   UpdateGridCamera();
+  HandleCameraMove(player);
   UpdateNodeDragging(player);
   UpdateNodeConnections(player);
 }
@@ -72,6 +75,42 @@ void ControlPanel::UpdateGridCamera() {
   }
 }
 
+void ControlPanel::HandleCameraMove(Player &player) {
+  Vector2 mousePosScreen = GetMousePosition();
+  Vector2 mousePosPanelGridWorld =
+      GetScreenToWorld2D(mousePosScreen, panelCamera);
+
+  // Don't move camera if the mouse is over any placed node
+  for (auto it = player.placedNodes.rbegin(); it != player.placedNodes.rend();
+       ++it) {
+    auto &node = *it;
+    if (CheckCollisionPointCircle(mousePosPanelGridWorld, node->panelPosition,
+                                  NODE_UI_SIZE / 2.0f)) {
+      return; // Mouse is over a node, cancel camera movement
+    }
+  }
+
+  // Start dragging when right mouse button is pressed
+  if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) &&
+      CheckCollisionPointRec(mousePosScreen, panelGridArea)) {
+    startCameraDraggingPos = mousePosScreen;
+  }
+
+  // Continue dragging while right mouse button is held down
+  if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) && startCameraDraggingPos.x != -1 &&
+      startCameraDraggingPos.y != -1) {
+
+    Vector2 mouseDelta =
+        Vector2Subtract(mousePosScreen, startCameraDraggingPos);
+    panelCamera.offset = Vector2Add(panelCamera.offset, mouseDelta);
+    startCameraDraggingPos = mousePosScreen; // Update for next frame
+  }
+
+  // Stop dragging when right mouse button is released
+  if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
+    startCameraDraggingPos = {-1, -1}; // Reset to "null" state
+  }
+}
 void ControlPanel::UpdateNodeDragging(Player &player) {
   Vector2 mousePosScreen = GetMousePosition();
   Vector2 mousePosPanelGridWorld =

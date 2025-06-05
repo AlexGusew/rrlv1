@@ -28,6 +28,7 @@ private:
   int draggingNodeIndex;
   bool draggingFromInventory;
   int connectingNodeFromId;
+  Vector2 startCameraDraggingPos;
 
   static const float NODE_UI_SIZE;
   static const float NODE_INV_ITEM_HEIGHT;
@@ -38,6 +39,7 @@ private:
   void UpdateNodeConnections(Player &player);
   void HandleNodePlacement(Player &player);
   void HandleNodeRemoval(Player &player);
+  void HandleCameraMove(Player &player);
 
   void DrawInventoryArea(const Player &player);
   void DrawGridArea(const Player &player);

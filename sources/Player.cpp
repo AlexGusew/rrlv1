@@ -7,7 +7,7 @@ const int SCREEN_HEIGHT = 700;
 Player::Player() {
   position = {(float)SCREEN_WIDTH / 2.0f, (float)SCREEN_HEIGHT / 2.0f};
   baseSpeed = 200.0f;
-  baseHealth = 100;
+  baseHealth = 100 * 10000;
   baseFireRate = 0.5f;
   baseDamage = 10;
   activeActionNodeId = -1;
