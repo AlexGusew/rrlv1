@@ -9,19 +9,15 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <cmath>
-#include <iostream>
 #include <memory>
-#include <ostream>
 #include <vector>
 
 //------------------------------------------------------------------------------------
 // Constants
 //------------------------------------------------------------------------------------
-#define VIRTUAL_WIDTH 800
-#define VIRTUAL_HEIGHT 600
+#define VIRTUAL_WIDTH 1600
+#define VIRTUAL_HEIGHT 1200
 
-// #define VIRTUAL_WIDTH 1600
-// #define VIRTUAL_HEIGHT 1200
 const int PLAYER_SIZE = 20;
 const int ENEMY_SIZE = 25;
 const int BULLET_SPEED = 800;
@@ -80,11 +76,11 @@ Player player;
 Bullet bullets[MAX_BULLETS];
 Enemy enemies[MAX_ENEMIES];
 
+SpriteManager spriteManager;
 NodesController nodesController;
-ControlPanel controlPanel(player);
+ControlPanel controlPanel(player, spriteManager);
 Window window;
 HUD hud;
-SpriteManager spriteManager;
 CollisionEditor collisionEditor;
 InputDisplay inputDisplay;
 
@@ -108,6 +104,9 @@ const Rectangle collisions[] = {
     {4, 3, 24, 26},   {35, 3, 24, 26},   {74, 5, 12, 21},
     {106, 3, 24, 26}, {138, 3, 24, 26},  {172, 10, 7, 14},
     {204, 3, 24, 26}, {224, 10, 32, 12}, {257, 3, 11, 26}};
+const NPatchInfo nPatchInfo[] = {
+    {{4, 3, 24, 26}, 2, 2, 2, 2, NPATCH_NINE_PATCH},
+    {{35, 3, 24, 26}, 2, 2, 2, 2, NPATCH_NINE_PATCH}};
 
 int main() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
@@ -115,7 +114,7 @@ int main() {
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "rrl - v0.0.3");
   SetTargetFPS(60);
 
-  spriteManager.Init("../assets/spritesheet.png", collisions);
+  spriteManager.Init("../assets/spritesheet.png", collisions, nPatchInfo);
   collisionEditor.AddSprite("General", "../assets/spritesheet.png");
 
   InitGame();
@@ -389,7 +388,6 @@ void UpdateDrawFrame() {
     hud.DrawGameOver(window.width, window.height);
   }
 
-  spriteManager.DrawDebugSprites();
   collisionEditor.Draw();
   inputDisplay.Draw();
 

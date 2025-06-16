@@ -1,4 +1,5 @@
 #pragma once
+#include "SpriteManager.h"
 #include "raylib.h"
 #include <string>
 #include <vector>
@@ -47,4 +48,6 @@ public:
 
   virtual NodeType getNodeType() const { return type; }
   virtual NodeKind getNodeKind() const { return kind; }
+  virtual void Draw(SpriteManager &spriteManager, Rectangle dest,
+                    float rotation) = 0;
 };

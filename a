@@ -90,11 +90,14 @@ FireActionNode::FireActionNode(int _id, float _val, float _dur)
 void FireActionNode::Draw(SpriteManager &spriteManager, Rectangle dest,
                           float rotation = 0.0f) {
   const NPatchInfo *nPatchInfo = spriteManager.GetNPatchInfo();
-  const NPatchInfo info = nPatchInfo[(int)SpriteType::ACTION_CHIP];
-  const Texture2D spritesheet = spriteManager.GetSpritesheet();
-  DrawTextureNPatch(spritesheet,
-                    {{33, 3, 30, 26}, 8, 4, 2, 1, NPATCH_NINE_PATCH}, dest,
-                    {0, 0}, rotation, WHITE);
+  NPatchInfo info = nPatchInfo[(int)SpriteType::ACTION_CHIP];
+  DrawTextureNPatch(spriteManager.GetSpritesheet(), info, dest, {0, 0},
+                    rotation, RAYWHITE);
+  TraceLog(LOG_INFO, "NPatch Source: x=%.f, y=%.f, w=%.f, h=%.f", info.source.x,
+           info.source.y, info.source.width, info.source.height);
+  TraceLog(LOG_INFO, "NPatch Borders: l=%d, t=%d, r=%d, b=%d", info.left,
+           info.top, info.right, info.bottom);
+  TraceLog(LOG_INFO, "NPatch Layout: %d", info.layout);
 };
 
 // ShieldActionNode

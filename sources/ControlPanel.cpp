@@ -1,6 +1,7 @@
 #include "ControlPanel.h"
 #include "BaseNode.h"
 #include "Player.h"
+#include "SpriteManager.h"
 #include "raylib.h"
 #include "raymath.h"
 #include <algorithm>
@@ -15,10 +16,11 @@ const Color STAT_ACTION_LINK_COLOR = {128, 0, 128, 255};
 const Color POWER_LINK_COLOR = {50, 205, 50, 255};
 const Color CYAN = {0, 255, 255, 255};
 
-ControlPanel::ControlPanel(Player &player)
+ControlPanel::ControlPanel(Player &player, SpriteManager &spriteManager)
     : isPanelOpen(false), inventoryScrollOffset(0.0f), draggingNodeIndex(-1),
       draggingFromInventory(false), connectingNodeFromId(-1),
-      startCameraDraggingPos({-1, -1}), player(player) {}
+      startCameraDraggingPos({-1, -1}), player(player),
+      spriteManager(spriteManager) {}
 
 void ControlPanel::Initialize(int screenWidth, int screenHeight) {
   panelArea = {screenWidth * 2.0f / 3.0f, 0, screenWidth / 3.0f,
@@ -448,6 +450,7 @@ void ControlPanel::DrawInventoryArea() {
           nodeRect.y < panelInventoryArea.y + panelInventoryArea.height) {
         bool isHovered = CheckCollisionPointRec(GetMousePosition(), nodeRect);
         DrawRectangleRec(nodeRect, player.inventoryNodes[i]->color);
+        player.inventoryNodes[i]->Draw(spriteManager, nodeRect, 0);
         DrawRectangleLinesEx(nodeRect, 2, isHovered ? YELLOW : DARKGRAY);
         DrawText(player.inventoryNodes[i]->name.c_str(), (int)(nodeRect.x + 5),
                  (int)(nodeRect.y + 5), 10, BLACK);

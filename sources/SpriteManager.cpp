@@ -4,12 +4,15 @@
 SpriteManager::SpriteManager() : spritesheet{0} {}
 
 void SpriteManager::Init(const char *spritesheetPath,
-                         const Rectangle *collisions) {
+                         const Rectangle *collisions,
+                         const NPatchInfo *nPatchInfo) {
   spritesheet = LoadTexture(spritesheetPath);
+
   // Initialize sprite rectangles (assuming horizontal layout)
   for (int i = 0; i < SPRITE_COUNT; i++) {
     sprites[i] = Rectangle{static_cast<float>(32 * i), 0.0f, 32.0f, 32.0f};
     this->collisions[i] = collisions[i];
+    this->nPatchInfo[i] = nPatchInfo[i];
   }
 }
 

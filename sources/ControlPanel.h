@@ -1,5 +1,6 @@
 #pragma once
 #include "Player.h"
+#include "SpriteManager.h"
 #include "raylib.h"
 
 class Player;
@@ -7,7 +8,7 @@ class BaseNode;
 
 class ControlPanel {
 public:
-  ControlPanel(Player &player);
+  ControlPanel(Player &player, SpriteManager &spriteManager);
   ~ControlPanel() = default;
 
   void Initialize(int screenWidth, int screenHeight);
@@ -31,6 +32,7 @@ private:
   int connectingNodeFromId;
   Vector2 startCameraDraggingPos;
   Player &player;
+  SpriteManager &spriteManager;
 
   static const float NODE_UI_SIZE;
   static const float NODE_INV_ITEM_HEIGHT;
